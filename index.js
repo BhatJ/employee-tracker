@@ -2,9 +2,6 @@
 // Include packages needed for this application
 const inquirer = require("inquirer");
 
-// A helper function to output text to the console in cyan
-const outputCyanText = (text) => console.log(`\x1b[36m${text}\x1b[0m`);
-
 // A function that displays the applications name 'Employee Manager' to 
 // the console.
 const displayBanner = () => {
@@ -30,6 +27,7 @@ const addADepartment = "Add a department";
 const addARole = "Add a role";
 const addAnEmployee = "Add an employee";
 const updateAnEmployeeRole = "Update and employee role";
+const exitApplication = "End session";
 
 // A question to ask what action the user would like to perform
 const whatToDoQuestion = [
@@ -38,11 +36,43 @@ const whatToDoQuestion = [
     name: "new_action",
     choices: [viewAllDepartments, viewAllRoles, viewAllEmployees,
               addADepartment, addARole, addAnEmployee,
-              updateAnEmployeeRole
+              updateAnEmployeeRole, exitApplication,
              ],
     message: "What would you like to do?",
   },
 ];
+
+// Follow up question to ask when adding a new department
+const nameOfDepartmentQuestion = [
+  {
+    type: "input",
+    name: "department",
+    message: "What is the name of the department?",
+  },
+];
+
+// Follow up questions to ask when adding a new role
+const newRoleQuestions = [
+  {
+    type: "input",
+    name: "name",
+    message: "What is the name of the role?",
+  },
+  {
+    type: "input",
+    name: "salary",
+    message: "What is the salary of the role?",
+  },
+  {
+    type: "input",
+    name: "department",
+    message: "Which department does the role belong to?",
+  },
+];
+
+
+// A helper function to output text to the console in cyan
+const outputCyanText = (text) => console.log(`\x1b[36m${text}\x1b[0m`);
 
 const viewDepartments = () => {
   console.log("\nView all departments\n");
@@ -57,11 +87,21 @@ const viewEmployees = () => {
 }
 
 const addDepartment = () => {
-  console.log("\nAdd a department\n");
+  return inquirer.prompt (nameOfDepartmentQuestion)
+    .then(answers => {
+      console.log("\nAdd " + answers.department + " to the table of departments\n");
+
+      askQuestions();
+    })
 }
 
 const addRole = () => {
-  console.log("\nAdd a role\n");
+  return inquirer.prompt (newRoleQuestions)
+    .then(answers => {
+      console.log("\nAdd " + answers.name + " to the table of roles\n");
+
+      askQuestions();
+    })
 }
 
 const addEmployee = () => {
@@ -74,6 +114,7 @@ const updateEmployee = () => {
 
 
 const askQuestions = () => {
+
   return inquirer.prompt (whatToDoQuestion)
     .then(answers => {
 
@@ -99,12 +140,11 @@ const askQuestions = () => {
         case updateAnEmployeeRole:
           updateEmployee();
           break;
+        case exitApplication:
+          return;
       };
-
-      askQuestions();
-
-    });
-};
+    })
+}
 
 displayBanner();
 
