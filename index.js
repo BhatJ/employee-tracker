@@ -70,20 +70,49 @@ const newRoleQuestions = [
   },
 ];
 
+// Follow up questions to ask when adding a new employee
+const newEmployeeQuestions = [
+  {
+    type: "input",
+    name: "first_name",
+    message: "What is the employee's first name?",
+  },
+  {
+    type: "input",
+    name: "last_name",
+    message: "What is the employee's last name?",
+  },
+  {
+    type: "input",
+    name: "role",
+    message: "What is the employee's role?",
+  },
+  {
+    type: "input",
+    name: "manager",
+    message: "Who is the employee's manager?",
+  },
+];
 
 // A helper function to output text to the console in cyan
 const outputCyanText = (text) => console.log(`\x1b[36m${text}\x1b[0m`);
 
 const viewDepartments = () => {
   console.log("\nView all departments\n");
+
+  askQuestions();
 }
 
 const viewRoles = () => {
   console.log("\nView all roles\n");
+
+  askQuestions();
 }
 
 const viewEmployees = () => {
   console.log("\nView all employees\n");
+
+  askQuestions();
 }
 
 const addDepartment = () => {
@@ -105,13 +134,19 @@ const addRole = () => {
 }
 
 const addEmployee = () => {
-  console.log("\nAdd an employee\n");
+  return inquirer.prompt (newEmployeeQuestions)
+    .then(answers => {
+      console.log("\nAdd a new employee - " + answers.first_name + " " + answers.last_name + "\n");
+
+      askQuestions();
+    })
 }
 
 const updateEmployee = () => {
   console.log("\nUpdate an employee role\n");
-}
 
+  askQuestions();
+}
 
 const askQuestions = () => {
 
