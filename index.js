@@ -277,8 +277,17 @@ const addEmployee = () => {
       inquirer.prompt (newEmployeeQuestions)
         .then (answers => { 
 
-          const query = `INSERT INTO employee (first_name, last_name, role_id, manager_id)
-                         VALUES ("${answers.first_name}", "${answers.last_name}", ${roles.indexOf(answers.role) + 1}, ${managers.indexOf(answers.manager)})`;
+          let query;
+
+          if (answers.manager === "None")
+          {
+            query = `INSERT INTO employee (first_name, last_name, role_id, manager_id)
+                     VALUES ("${answers.first_name}", "${answers.last_name}", ${roles.indexOf(answers.role) + 1}, NULL)`;
+          } else 
+          {
+            query = `INSERT INTO employee (first_name, last_name, role_id, manager_id)
+                     VALUES ("${answers.first_name}", "${answers.last_name}", ${roles.indexOf(answers.role) + 1}, ${managers.indexOf(answers.manager)})`;
+          }
 
           db.query(query, (err, rows) => {
 
