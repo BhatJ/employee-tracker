@@ -110,6 +110,7 @@ const db = mysql.createConnection(
 
 // A helper function to output text to the console in cyan
 const outputCyanText = (text) => console.log(`\x1b[36m${text}\x1b[0m`);
+const outputGreenText = (text) => console.log(`\x1b[33m${text}\x1b[0m`);
 
 const printTable = (table) => {
   console.log("\n");
@@ -175,10 +176,18 @@ const viewEmployees = () => {
 const addDepartment = () => {
   return inquirer.prompt (nameOfDepartmentQuestion)
     .then(answers => {
-      console.log("\nAdd " + answers.department + " to the table of departments\n");
+      // Create sql query
+      const query = `INSERT INTO department (name) VALUES ("${answers.department}");`
 
-      askQuestions();
-    })
+      db.query(query, (err, rows) => {
+    
+        if (err) throw err; 
+
+        outputGreenText(`Added ${answers.department} to the database`);
+        
+        askQuestions();
+      });
+    });
 }
 
 const addRole = () => {
