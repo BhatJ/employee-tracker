@@ -66,8 +66,9 @@ const newRoleQuestions = [
     message: "What is the salary of the role?",
   },
   {
-    type: "input",
+    type: "list",
     name: "department",
+    choices: [],
     message: "Which department does the role belong to?",
   },
 ];
@@ -85,13 +86,15 @@ const newEmployeeQuestions = [
     message: "What is the employee's last name?",
   },
   {
-    type: "input",
+    type: "list",
     name: "role",
+    choices: [],
     message: "What is the employee's role?",
   },
   {
-    type: "input",
+    type: "list",
     name: "manager",
+    choices: [],
     message: "Who is the employee's manager?",
   },
 ];
@@ -110,7 +113,7 @@ const db = mysql.createConnection(
 
 // A helper function to output text to the console in cyan
 const outputCyanText = (text) => console.log(`\x1b[36m${text}\x1b[0m`);
-const outputGreenText = (text) => console.log(`\x1b[33m${text}\x1b[0m`);
+const outputYellowText = (text) => console.log(`\x1b[33m${text}\x1b[0m`);
 
 const printTable = (table) => {
   console.log("\n");
@@ -132,8 +135,6 @@ const viewDepartments = () => {
 
     askQuestions();
   });
-
-  
 }
 
 // A function to query the employee database and print the list of roles
@@ -183,7 +184,7 @@ const addDepartment = () => {
     
         if (err) throw err; 
 
-        outputGreenText(`Added ${answers.department} to the database`);
+        outputYellowText(`Added ${answers.department} to the database`);
         
         askQuestions();
       });
@@ -191,21 +192,90 @@ const addDepartment = () => {
 }
 
 const addRole = () => {
-  return inquirer.prompt (newRoleQuestions)
-    .then(answers => {
-      console.log("\nAdd " + answers.name + " to the table of roles\n");
+  // Lets get the list of departments from the employee database
+  let departments = [];
 
-      askQuestions();
-    })
+  const query = `SELECT * FROM department`;
+
+  db.query(query, (err, rows) => {
+
+    if (err) throw err; 
+
+    // Populate departments with the results of the query
+    rows.forEach(d => {
+      departments.push(d.name);
+    });
+
+    // Update the choices in the new role inquirer question array
+    newRoleQuestions[2].choices = departments;
+
+    inquirer.prompt (newRoleQuestions)
+      .then (answers => { 
+
+        const query = `INSERT INTO role (title, salary, department_id)
+                       VALUES ("${answers.name}", ${answers.salary}, ${departments.indexOf(answers.department) + 1})`;
+
+        db.query(query, (err, rows) => {
+
+          if (err) throw err;
+
+          outputYellowText(`Added ${answers.name} to the database`);
+
+          askQuestions();
+
+        });
+        
+      });
+  });
 }
 
 const addEmployee = () => {
-  return inquirer.prompt (newEmployeeQuestions)
-    .then(answers => {
-      console.log("\nAdd a new employee - " + answers.first_name + " " + answers.last_name + "\n");
+  // Lets get the list of roles from the employee database
+  let roles = [];
+  let managers = ["None"];
 
-      askQuestions();
-    })
+  const query = `SELECT * FROM role`;
+
+  db.query(query, (err, rows) => {
+
+    if (err) throw err; 
+
+    // Populate roles with the results of the query
+    rows.forEach(r => {
+      roles.push(r.title);
+    });
+
+    // Update the choices in the new employee inquirer question array
+    newEmployeeQuestions[2].choices = roles;
+
+    const query = `SELECT CONCAT(e.first_name, " ", e.last_name) AS name FROM employee AS e`;
+
+    db.query(query, (err, rows) => {
+      rows.forEach(e => {
+        managers.push(e.name);
+      })
+
+      newEmployeeQuestions[3].choices = managers;
+
+      // Ask the user questions about the new employee
+      inquirer.prompt (newEmployeeQuestions)
+        .then (answers => { 
+
+          const query = `INSERT INTO employee (first_name, last_name, role_id, manager_id)
+                         VALUES ("${answers.first_name}", "${answers.last_name}", ${roles.indexOf(answers.role) + 1}, ${managers.indexOf(answers.manager)})`;
+
+          db.query(query, (err, rows) => {
+
+            if (err) throw err;
+
+            outputYellowText(`Added ${answers.first_name} ${answers.last_name} to the database`);
+
+            askQuestions();
+
+          });
+      });
+    });
+  });
 }
 
 const updateEmployee = () => {
@@ -242,7 +312,7 @@ const askQuestions = () => {
           updateEmployee();
           break;
         case exitApplication:
-          return;
+          process.exit();
       };
     })
 }
