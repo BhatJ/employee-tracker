@@ -1,6 +1,8 @@
 
 // Include packages needed for this application
 const inquirer = require("inquirer");
+const mysql = require('mysql2');
+const consoleTable = require('console.table');
 
 // A function that displays the applications name 'Employee Manager' to 
 // the console.
@@ -94,25 +96,80 @@ const newEmployeeQuestions = [
   },
 ];
 
+// Connect to database
+const db = mysql.createConnection(
+  {
+    host: 'localhost',
+    // MySQL Username
+    user: 'root',
+    // MySQL Password
+    password: 'mySQL___mySQL___',
+    database: 'employee_db'
+  }
+);
+
 // A helper function to output text to the console in cyan
 const outputCyanText = (text) => console.log(`\x1b[36m${text}\x1b[0m`);
 
-const viewDepartments = () => {
-  console.log("\nView all departments\n");
-
-  askQuestions();
+const printTable = (table) => {
+  console.log("\n");
+  console.table(table);
 }
 
-const viewRoles = () => {
-  console.log("\nView all roles\n");
+// A function to query the employee database and print the list of departments
+const viewDepartments = () => {
 
-  askQuestions();
+  // Construct the sql query. Select all rows from the department table
+  const query = `SELECT * FROM department`;
+
+  // Execute and print the query if there is no error
+  db.query(query, (err, rows) => {
+
+    if (err) throw err; 
+
+    printTable(rows);
+
+    askQuestions();
+  });
+
+  
+}
+
+// A function to query the employee database and print the list of roles
+// Print the id, title, department, and salary for each role
+const viewRoles = () => {
+  
+  // Construct the sql query
+  // 
+  const query = `SELECT r.id, r.title, d.name AS department, r.salary 
+                 FROM role AS r 
+                 INNER JOIN department AS d ON r.department_id = d.id;`;
+  
+  db.query(query, (err, rows) => {
+    
+    if (err) throw err; 
+    printTable(rows);
+    
+    askQuestions();
+  });
 }
 
 const viewEmployees = () => {
-  console.log("\nView all employees\n");
-
-  askQuestions();
+  // Construct the sql query
+  // 
+  const query = `SELECT e.id, e.first_name, e.last_name, r.title, d.name, r.salary, CONCAT(m.first_name, " ", m.last_name) AS manager
+                 FROM employee AS e
+                 LEFT JOIN role AS r ON e.role_id = r.id
+                 LEFT JOIN department AS d ON r.department_id = d.id 
+                 LEFT JOIN employee AS m ON e.manager_id = m.id;`;
+  
+  db.query(query, (err, rows) => {
+    
+    if (err) throw err; 
+    printTable(rows);
+    
+    askQuestions();
+  });
 }
 
 const addDepartment = () => {
@@ -184,4 +241,3 @@ const askQuestions = () => {
 displayBanner();
 
 askQuestions();
-
