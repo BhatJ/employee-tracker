@@ -28,7 +28,7 @@ const viewAllEmployees = "View all employees";
 const addADepartment = "Add a department";
 const addARole = "Add a role";
 const addAnEmployee = "Add an employee";
-const updateAnEmployeeRole = "Update and employee role";
+const updateAnEmployeeRole = "Update an employee's role";
 const exitApplication = "End session";
 
 // A question to ask what action the user would like to perform
@@ -96,6 +96,22 @@ const newEmployeeQuestions = [
     name: "manager",
     choices: [],
     message: "Who is the employee's manager?",
+  },
+];
+
+// Follow up questions to ask when updating an employee's role
+const updateEmployeeQuestions = [
+  {
+    type: "list",
+    name: "name",
+    choices: [],
+    message: "Which employee's role do you want to update?",
+  },
+  {
+    type: "list",
+    name: "role",
+    choices: [],
+    message: "Which role do you want to assign the selected employee?",
   },
 ];
 
@@ -279,9 +295,53 @@ const addEmployee = () => {
 }
 
 const updateEmployee = () => {
-  console.log("\nUpdate an employee role\n");
+  // Lets get the list of roles from the employee database
+  let roles = [];
+  let employees = [];
 
-  askQuestions();
+  const query = `SELECT * FROM role`;
+
+  db.query(query, (err, rows) => {
+
+    if (err) throw err; 
+
+    // Populate roles with the results of the query
+    rows.forEach(r => {
+      roles.push(r.title);
+    });
+
+    // Update the choices in the new employee inquirer question array
+    updateEmployeeQuestions[1].choices = roles;
+
+    const query = `SELECT CONCAT(e.first_name, " ", e.last_name) AS name FROM employee AS e`;
+
+    db.query(query, (err, rows) => {
+      rows.forEach(e => {
+        employees.push(e.name);
+      })
+
+      updateEmployeeQuestions[0].choices = employees;
+
+      // Ask the user questions about the new employee
+      inquirer.prompt (updateEmployeeQuestions)
+        .then (answers => { 
+
+          const query = `UPDATE employee
+                         SET role_id = ${roles.indexOf(answers.role) + 1}
+                         WHERE id = ${employees.indexOf(answers.name) + 1}`;
+
+          db.query(query, (err, rows) => {
+
+            if (err) throw err;
+
+            outputYellowText(`Added ${answers.name} role`);
+
+            askQuestions();
+
+          });
+      });
+    });
+  });
 }
 
 const askQuestions = () => {
