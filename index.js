@@ -1,6 +1,8 @@
 
 // Include packages needed for this application
 const inquirer = require("inquirer");
+const mysql = require('mysql2');
+const consoleTable = require('console.table');
 
 // A function that displays the applications name 'Employee Manager' to 
 // the console.
@@ -26,7 +28,7 @@ const viewAllEmployees = "View all employees";
 const addADepartment = "Add a department";
 const addARole = "Add a role";
 const addAnEmployee = "Add an employee";
-const updateAnEmployeeRole = "Update and employee role";
+const updateAnEmployeeRole = "Update an employee's role";
 const exitApplication = "End session";
 
 // A question to ask what action the user would like to perform
@@ -64,8 +66,9 @@ const newRoleQuestions = [
     message: "What is the salary of the role?",
   },
   {
-    type: "input",
+    type: "list",
     name: "department",
+    choices: [],
     message: "Which department does the role belong to?",
   },
 ];
@@ -83,69 +86,262 @@ const newEmployeeQuestions = [
     message: "What is the employee's last name?",
   },
   {
-    type: "input",
+    type: "list",
     name: "role",
+    choices: [],
     message: "What is the employee's role?",
   },
   {
-    type: "input",
+    type: "list",
     name: "manager",
+    choices: [],
     message: "Who is the employee's manager?",
   },
 ];
 
+// Follow up questions to ask when updating an employee's role
+const updateEmployeeQuestions = [
+  {
+    type: "list",
+    name: "name",
+    choices: [],
+    message: "Which employee's role do you want to update?",
+  },
+  {
+    type: "list",
+    name: "role",
+    choices: [],
+    message: "Which role do you want to assign the selected employee?",
+  },
+];
+
+// Connect to database
+const db = mysql.createConnection(
+  {
+    host: 'localhost',
+    // MySQL Username
+    user: 'root',
+    // MySQL Password
+    password: 'mySQL___mySQL___',
+    database: 'employee_db'
+  }
+);
+
 // A helper function to output text to the console in cyan
 const outputCyanText = (text) => console.log(`\x1b[36m${text}\x1b[0m`);
+const outputYellowText = (text) => console.log(`\x1b[33m${text}\x1b[0m`);
 
-const viewDepartments = () => {
-  console.log("\nView all departments\n");
-
-  askQuestions();
+const printTable = (table) => {
+  console.log("\n");
+  console.table(table);
 }
 
-const viewRoles = () => {
-  console.log("\nView all roles\n");
+// A function to query the employee database and print the list of departments
+const viewDepartments = () => {
 
-  askQuestions();
+  // Construct the sql query. Select all rows from the department table
+  const query = `SELECT * FROM department`;
+
+  // Execute and print the query if there is no error
+  db.query(query, (err, rows) => {
+
+    if (err) throw err; 
+
+    printTable(rows);
+
+    askQuestions();
+  });
+}
+
+// A function to query the employee database and print the list of roles
+// Print the id, title, department, and salary for each role
+const viewRoles = () => {
+  
+  // Construct the sql query
+  // 
+  const query = `SELECT r.id, r.title, d.name AS department, r.salary 
+                 FROM role AS r 
+                 INNER JOIN department AS d ON r.department_id = d.id;`;
+  
+  db.query(query, (err, rows) => {
+    
+    if (err) throw err; 
+    printTable(rows);
+    
+    askQuestions();
+  });
 }
 
 const viewEmployees = () => {
-  console.log("\nView all employees\n");
-
-  askQuestions();
+  // Construct the sql query
+  // 
+  const query = `SELECT e.id, e.first_name, e.last_name, r.title, d.name, r.salary, CONCAT(m.first_name, " ", m.last_name) AS manager
+                 FROM employee AS e
+                 LEFT JOIN role AS r ON e.role_id = r.id
+                 LEFT JOIN department AS d ON r.department_id = d.id 
+                 LEFT JOIN employee AS m ON e.manager_id = m.id;`;
+  
+  db.query(query, (err, rows) => {
+    
+    if (err) throw err; 
+    printTable(rows);
+    
+    askQuestions();
+  });
 }
 
 const addDepartment = () => {
   return inquirer.prompt (nameOfDepartmentQuestion)
     .then(answers => {
-      console.log("\nAdd " + answers.department + " to the table of departments\n");
+      // Create sql query
+      const query = `INSERT INTO department (name) VALUES ("${answers.department}");`
 
-      askQuestions();
-    })
+      db.query(query, (err, rows) => {
+    
+        if (err) throw err; 
+
+        outputYellowText(`Added ${answers.department} to the database`);
+        
+        askQuestions();
+      });
+    });
 }
 
 const addRole = () => {
-  return inquirer.prompt (newRoleQuestions)
-    .then(answers => {
-      console.log("\nAdd " + answers.name + " to the table of roles\n");
+  // Lets get the list of departments from the employee database
+  let departments = [];
 
-      askQuestions();
-    })
+  const query = `SELECT * FROM department`;
+
+  db.query(query, (err, rows) => {
+
+    if (err) throw err; 
+
+    // Populate departments with the results of the query
+    rows.forEach(d => {
+      departments.push(d.name);
+    });
+
+    // Update the choices in the new role inquirer question array
+    newRoleQuestions[2].choices = departments;
+
+    inquirer.prompt (newRoleQuestions)
+      .then (answers => { 
+
+        const query = `INSERT INTO role (title, salary, department_id)
+                       VALUES ("${answers.name}", ${answers.salary}, ${departments.indexOf(answers.department) + 1})`;
+
+        db.query(query, (err, rows) => {
+
+          if (err) throw err;
+
+          outputYellowText(`Added ${answers.name} to the database`);
+
+          askQuestions();
+
+        });
+        
+      });
+  });
 }
 
 const addEmployee = () => {
-  return inquirer.prompt (newEmployeeQuestions)
-    .then(answers => {
-      console.log("\nAdd a new employee - " + answers.first_name + " " + answers.last_name + "\n");
+  // Lets get the list of roles from the employee database
+  let roles = [];
+  let managers = ["None"];
 
-      askQuestions();
-    })
+  const query = `SELECT * FROM role`;
+
+  db.query(query, (err, rows) => {
+
+    if (err) throw err; 
+
+    // Populate roles with the results of the query
+    rows.forEach(r => {
+      roles.push(r.title);
+    });
+
+    // Update the choices in the new employee inquirer question array
+    newEmployeeQuestions[2].choices = roles;
+
+    const query = `SELECT CONCAT(e.first_name, " ", e.last_name) AS name FROM employee AS e`;
+
+    db.query(query, (err, rows) => {
+      rows.forEach(e => {
+        managers.push(e.name);
+      })
+
+      newEmployeeQuestions[3].choices = managers;
+
+      // Ask the user questions about the new employee
+      inquirer.prompt (newEmployeeQuestions)
+        .then (answers => { 
+
+          const query = `INSERT INTO employee (first_name, last_name, role_id, manager_id)
+                         VALUES ("${answers.first_name}", "${answers.last_name}", ${roles.indexOf(answers.role) + 1}, ${managers.indexOf(answers.manager)})`;
+
+          db.query(query, (err, rows) => {
+
+            if (err) throw err;
+
+            outputYellowText(`Added ${answers.first_name} ${answers.last_name} to the database`);
+
+            askQuestions();
+
+          });
+      });
+    });
+  });
 }
 
 const updateEmployee = () => {
-  console.log("\nUpdate an employee role\n");
+  // Lets get the list of roles from the employee database
+  let roles = [];
+  let employees = [];
 
-  askQuestions();
+  const query = `SELECT * FROM role`;
+
+  db.query(query, (err, rows) => {
+
+    if (err) throw err; 
+
+    // Populate roles with the results of the query
+    rows.forEach(r => {
+      roles.push(r.title);
+    });
+
+    // Update the choices in the new employee inquirer question array
+    updateEmployeeQuestions[1].choices = roles;
+
+    const query = `SELECT CONCAT(e.first_name, " ", e.last_name) AS name FROM employee AS e`;
+
+    db.query(query, (err, rows) => {
+      rows.forEach(e => {
+        employees.push(e.name);
+      })
+
+      updateEmployeeQuestions[0].choices = employees;
+
+      // Ask the user questions about the new employee
+      inquirer.prompt (updateEmployeeQuestions)
+        .then (answers => { 
+
+          const query = `UPDATE employee
+                         SET role_id = ${roles.indexOf(answers.role) + 1}
+                         WHERE id = ${employees.indexOf(answers.name) + 1}`;
+
+          db.query(query, (err, rows) => {
+
+            if (err) throw err;
+
+            outputYellowText(`Added ${answers.name} role`);
+
+            askQuestions();
+
+          });
+      });
+    });
+  });
 }
 
 const askQuestions = () => {
@@ -176,7 +372,7 @@ const askQuestions = () => {
           updateEmployee();
           break;
         case exitApplication:
-          return;
+          process.exit();
       };
     })
 }
@@ -184,4 +380,3 @@ const askQuestions = () => {
 displayBanner();
 
 askQuestions();
-
