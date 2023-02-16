@@ -35,7 +35,7 @@ THEN I am prompted to select an employee to update and their new role and this i
 
 The following walkthrough video shows an example of the application being used from the command line:
 
-[Employee Tracker walkthrough](#)
+[Employee Tracker walkthrough](https://drive.google.com/file/d/1nc7jC53jOc5Qjhn1_fdiKjqE8lhPuJOd/view?usp=share_link)
 
 ## Getting Started
 
@@ -56,4 +56,4 @@ The following walkthrough video shows an example of the application being used f
 * At a terminal run the team profile HTML generator by executing 'node index.js'
 * Follow the prompts to choose actions to perform
 * To exit the application choose 'End Session'
-* Walkthrough - [Employee Tracker walkthrough](#)
+* Walkthrough - [Employee Tracker walkthrough](https://drive.google.com/file/d/1nc7jC53jOc5Qjhn1_fdiKjqE8lhPuJOd/view?usp=share_link)
